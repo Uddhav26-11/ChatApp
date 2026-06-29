@@ -5,41 +5,47 @@
   --sidebar-active: #d4d8e2;
   --sidebar-text: #1c1e26;
   --sidebar-text-dim: #6b7080;
-  --bg-page: #ffffff;
-  --bg-card: #f4f5f8;
+  --bg-page: #f4f5f8;
+  --bg-card: #ffffff;
   --border-color: #d4d8e2;
   --text-main: #1c1e26;
   --text-soft: #6b7080;
   --msg-own-bg: #5b5fef;
   --msg-own-text: #ffffff;
-  --msg-other-bg: #e4e6ec;
+  --msg-other-bg: #ffffff;
   --msg-other-text: #1c1e26;
-  --input-bg: #f4f5f8;
+  --input-bg: #ffffff;
   --input-border: #d4d8e2;
   --chat-header-bg: #ffffff;
   --chat-main-bg: #f4f5f8;
+  --reaction-bg: #ffffff;
+  --mention-bg: #ffffff;
+  --avatar-dot-border: #f0f2f5;
 }
 
-/* ============ DARK THEME (default) ============ */
+/* ============ DARK THEME ============ */
 [data-theme="dark"] {
   --sidebar-bg: #1a1d29;
   --sidebar-hover: #252939;
   --sidebar-active: #2f3349;
   --sidebar-text: #c5c7d4;
   --sidebar-text-dim: #6b7080;
-  --bg-page: #f4f5f8;
-  --bg-card: #ffffff;
-  --border-color: #e4e6ec;
-  --text-main: #1c1e26;
-  --text-soft: #6b7080;
+  --bg-page: #0f1117;
+  --bg-card: #1a1d29;
+  --border-color: #2a2d3e;
+  --text-main: #e8eaf0;
+  --text-soft: #8b90a4;
   --msg-own-bg: #5b5fef;
   --msg-own-text: #ffffff;
-  --msg-other-bg: #f0f2f5;
-  --msg-other-text: #1c1e26;
-  --input-bg: #f4f5f8;
-  --input-border: #e4e6ec;
-  --chat-header-bg: #ffffff;
-  --chat-main-bg: #f4f5f8;
+  --msg-other-bg: #252939;
+  --msg-other-text: #e8eaf0;
+  --input-bg: #252939;
+  --input-border: #2a2d3e;
+  --chat-header-bg: #1a1d29;
+  --chat-main-bg: #0f1117;
+  --reaction-bg: #1a1d29;
+  --mention-bg: #1a1d29;
+  --avatar-dot-border: #1a1d29;
 }
 
 /* ============ THEME TOGGLE BUTTON ============ */
@@ -55,71 +61,55 @@
   line-height: 1;
 }
 
-.theme-toggle-btn:hover {
-  background: var(--sidebar-hover);
-}
+.theme-toggle-btn:hover { background: var(--sidebar-hover); }
 
-/* ============ SIDEBAR use CSS vars ============ */
-.sidebar {
-  background: var(--sidebar-bg) !important;
-  color: var(--sidebar-text) !important;
-}
+/* ============ SIDEBAR ============ */
+.sidebar { background: var(--sidebar-bg) !important; color: var(--sidebar-text) !important; }
+.sidebar-brand h1, .sidebar-section-title, .room-item, .no-users { color: var(--sidebar-text) !important; }
+.room-item:hover { background: var(--sidebar-hover) !important; }
+.room-item.active { background: var(--sidebar-active) !important; }
+.user-name-text { color: var(--sidebar-text) !important; }
+.user-status-dim { color: var(--sidebar-text-dim) !important; }
+.avatar-dot { border-color: var(--avatar-dot-border) !important; }
 
-.sidebar-brand h1,
-.sidebar-section-title,
-.room-item,
-.no-users {
-  color: var(--sidebar-text) !important;
-}
+/* ============ CHAT ============ */
+.chat-app { background: var(--bg-page) !important; }
+.chat-main { background: var(--chat-main-bg) !important; }
+.chat-header { background: var(--chat-header-bg) !important; border-bottom: 1px solid var(--border-color) !important; }
+.chat-header h3, .chat-header-hash { color: var(--text-main) !important; }
+.chat-messages { background: var(--chat-main-bg); }
+.no-messages { color: var(--text-soft) !important; }
 
-.room-item:hover {
-  background: var(--sidebar-hover) !important;
-}
+/* ============ MESSAGES ============ */
+.own-bubble { background: var(--msg-own-bg) !important; color: var(--msg-own-text) !important; }
+.other-bubble { background: var(--msg-other-bg) !important; color: var(--msg-other-text) !important; border-color: var(--border-color) !important; }
+.other-bubble .msg-text { color: var(--msg-other-text) !important; }
+.other-bubble .msg-time { color: var(--text-soft) !important; }
 
-.room-item.active {
-  background: var(--sidebar-active) !important;
-}
+/* ============ CHAT INPUT ============ */
+.chat-input-area { background: var(--chat-header-bg) !important; border-top: 1px solid var(--border-color) !important; }
+.chat-input-area input { background: var(--input-bg) !important; border: 1.5px solid var(--input-border) !important; color: var(--text-main) !important; }
+.chat-input-area input::placeholder { color: var(--text-soft) !important; }
+.chat-input-area input:focus { border-color: var(--accent) !important; }
 
-/* ============ CHAT use CSS vars ============ */
-.chat-main {
-  background: var(--chat-main-bg) !important;
-}
+/* ============ REACTIONS ============ */
+.reaction-bar { background: var(--reaction-bg) !important; border-color: var(--border-color) !important; }
+.reaction-count-btn { background: var(--input-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+.reaction-count-btn:hover { background: var(--sidebar-active) !important; }
 
-.chat-header {
-  background: var(--chat-header-bg) !important;
-  border-bottom: 1px solid var(--border-color) !important;
-}
+/* ============ MENTION DROPDOWN ============ */
+.mention-dropdown { background: var(--mention-bg) !important; border-color: var(--border-color) !important; }
+.mention-item { color: var(--text-main) !important; }
+.mention-item:hover, .mention-item-active { background: var(--sidebar-hover) !important; }
 
-.chat-header h3,
-.chat-header-hash {
-  color: var(--text-main) !important;
-}
+/* ============ PROFILE MODAL ============ */
+.profile-modal { background: var(--chat-header-bg) !important; }
+.profile-username { color: var(--text-main) !important; }
+.profile-email, .profile-joined { color: var(--text-soft) !important; }
+.modal-close-btn { color: var(--text-soft) !important; }
+.modal-close-btn:hover { background: var(--sidebar-active) !important; }
 
-.chat-header-sub {
-  color: var(--text-soft) !important;
-}
-
-.own-bubble {
-  background: var(--msg-own-bg) !important;
-  color: var(--msg-own-text) !important;
-}
-
-.other-bubble {
-  background: var(--msg-other-bg) !important;
-  color: var(--msg-other-text) !important;
-}
-
-.chat-input-area {
-  background: var(--chat-header-bg) !important;
-  border-top: 1px solid var(--border-color) !important;
-}
-
-.chat-input-area input {
-  background: var(--input-bg) !important;
-  border: 1px solid var(--input-border) !important;
-  color: var(--text-main) !important;
-}
-
-.no-messages {
-  color: var(--text-soft) !important;
-}
+/* ============ SCROLLBARS ============ */
+[data-theme="dark"] ::-webkit-scrollbar { width: 5px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: transparent; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--sidebar-active); border-radius: 4px; }

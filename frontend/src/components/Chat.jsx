@@ -37,14 +37,14 @@ function Chat() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
 
-  // ── Mention states ──
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionList, setMentionList] = useState([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionIndex, setMentionIndex] = useState(0);
 
-  // ── Profile Modal state ──
   const [profileUser, setProfileUser] = useState(null);
+
+  const [now, setNow] = useState(new Date());
 
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -58,7 +58,6 @@ function Chat() {
     ? [user._id, selectedUser._id].sort().join("_")
     : activeRoom;
 
-  // ── Fetch users ──
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -71,7 +70,6 @@ function Chat() {
     fetchUsers();
   }, []);
 
-  // ── Fetch messages + join room ──
   useEffect(() => {
     const fetchAndJoin = async () => {
       try {
@@ -92,7 +90,6 @@ function Chat() {
     fetchAndJoin();
   }, [activeRoom, selectedUser, socket]);
 
-  // ── Socket listeners ──
   useEffect(() => {
     if (!socket) return;
 
@@ -151,12 +148,15 @@ function Chat() {
     };
   }, [socket, activeRoom, selectedUser, roomId]);
 
-  // ── Auto scroll ──
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Mention keyboard navigation ──
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!showMentions) return;
@@ -287,6 +287,14 @@ function Chat() {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const formatClock = (date) => {
+    let h = date.getHours();
+    const m = String(date.getMinutes()).padStart(2, "0");
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return { time: `${String(h).padStart(2, "0")}:${m}`, ampm };
+  };
+
   const getReactionCounts = (reactions) => {
     if (!reactions) return [];
     const entries =
@@ -318,14 +326,11 @@ function Chat() {
     });
   };
 
-  // ── Avatar click — profile dhundho ──
   const handleAvatarClick = (senderName) => {
-    // Current user ka profile
     if (senderName === user.username) {
       setProfileUser({ ...user, createdAt: user.createdAt });
       return;
     }
-    // Dusre users mein dhundho
     const found = users.find(
       (u) => u.username.toLowerCase() === senderName.toLowerCase()
     );
@@ -351,7 +356,6 @@ function Chat() {
           <div className="chat-header-left">
             {selectedUser ? (
               <>
-                {/* Header mein bhi profile click */}
                 <div
                   className={`avatar ${getAvatarColorClass(selectedUser.username)} header-avatar`}
                   onClick={() => setProfileUser(selectedUser)}
@@ -368,7 +372,13 @@ function Chat() {
               </>
             )}
           </div>
-          <span className="chat-header-sub">{onlineUsers.length} online</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span className="chat-header-sub">{onlineUsers.length} online</span>
+            <div className="clock-badge">
+              <span className="clock-time">{formatClock(now).time}</span>
+              <span className="clock-ampm">{formatClock(now).ampm}</span>
+            </div>
+          </div>
         </div>
 
         <div className="chat-messages">
@@ -527,7 +537,6 @@ function Chat() {
         </form>
       </div>
 
-      {/* Profile Modal */}
       {profileUser && (
         <ProfileModal
           profileUser={profileUser}
