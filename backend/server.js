@@ -14,21 +14,18 @@ connectDB();
 
 const app = express();
 
-// Vercel ka pattern match karo — sab Vercel URLs allow honge
 const isAllowedOrigin = (origin) => {
-  if (!origin) return true; // Postman/direct requests
+  if (!origin) return true;
   if (origin === "http://localhost:5173") return true;
-  if (origin.endsWith("-uddhav-c-project.vercel.app")) return true; // Vercel preview URLs
-  if (origin === "https://chat-app-eta-flax.vercel.app") return true; // production URL
+  if (origin.endsWith("-uddhav-c-project.vercel.app")) return true;
+  if (origin === "https://chat-app-eta-flax.vercel.app") return true;
   return false;
 };
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (isAllowedOrigin(origin)) {
-        return callback(null, true);
-      }
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(new Error("CORS not allowed"));
     },
     credentials: true,
@@ -49,9 +46,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin(origin, callback) {
-      if (isAllowedOrigin(origin)) {
-        return callback(null, true);
-      }
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(new Error("CORS not allowed"));
     },
     methods: ["GET", "POST"],
@@ -64,20 +59,24 @@ const onlineUsers = new Map();
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
+  // ── User online ──
   socket.on("user-online", (userId) => {
     onlineUsers.set(userId, socket.id);
     socket.userId = userId;
     io.emit("online-users", Array.from(onlineUsers.keys()));
   });
 
+  // ── Group room join ──
   socket.on("join-room", (room) => {
     socket.join(room);
   });
 
+  // ── Private room join ──
   socket.on("join-private-room", (roomId) => {
     socket.join(roomId);
   });
 
+  // ── Group message ──
   socket.on("send-message", async (data) => {
     try {
       const { sender, senderName, room, text } = data;
@@ -94,6 +93,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ── Private message ──
   socket.on("private-message", async (data) => {
     try {
       const { sender, receiver, senderName, text } = data;
@@ -112,6 +112,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ── Group typing ──
   socket.on("typing", ({ room, senderName }) => {
     socket.to(room).emit("typing", senderName);
   });
@@ -120,6 +121,7 @@ io.on("connection", (socket) => {
     socket.to(room).emit("stop-typing");
   });
 
+  // ── Private typing ──
   socket.on("typing-private", ({ sender, receiver, senderName }) => {
     const roomId = [sender, receiver].sort().join("_");
     socket.to(roomId).emit("typing-private", senderName);
@@ -130,6 +132,42 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("stop-typing-private");
   });
 
+  // ── Reaction ──
+  socket.on("add-reaction", async ({ messageId, emoji, userId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) return;
+
+      const reactions = message.reactions || new Map();
+      const users = reactions.get(emoji) || [];
+
+      // Toggle — already reacted hai toh remove, nahi hai toh add
+      const index = users.indexOf(userId);
+      if (index > -1) {
+        users.splice(index, 1);
+      } else {
+        users.push(userId);
+      }
+
+      if (users.length === 0) {
+        reactions.delete(emoji);
+      } else {
+        reactions.set(emoji, users);
+      }
+
+      message.reactions = reactions;
+      await message.save();
+
+      io.to(message.room).emit("reaction-updated", {
+        messageId,
+        reactions: Object.fromEntries(message.reactions),
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  });
+
+  // ── Disconnect ──
   socket.on("disconnect", () => {
     if (socket.userId) {
       onlineUsers.delete(socket.userId);

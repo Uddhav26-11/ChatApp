@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import toast from "react-hot-toast";
 import { useAuth, API_URL } from "../context/AuthContext.jsx";
 
 function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
@@ -15,7 +15,6 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
@@ -25,9 +24,10 @@ function Register() {
         password,
       });
       login(res.data);
+      toast.success(`Account created! Welcome, ${res.data.username}! 🎉`);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong");
+      toast.error(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -39,8 +39,6 @@ function Register() {
         <div className="auth-logo">💬</div>
         <h2>Create Account</h2>
         <p className="auth-subtitle">Join ChatSphere today</p>
-
-        {error && <div className="auth-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

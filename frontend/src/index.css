@@ -1,28 +1,125 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ============ LIGHT THEME ============ */
+[data-theme="light"] {
+  --sidebar-bg: #f0f2f5;
+  --sidebar-hover: #e2e5ea;
+  --sidebar-active: #d4d8e2;
+  --sidebar-text: #1c1e26;
+  --sidebar-text-dim: #6b7080;
+  --bg-page: #ffffff;
+  --bg-card: #f4f5f8;
+  --border-color: #d4d8e2;
+  --text-main: #1c1e26;
+  --text-soft: #6b7080;
+  --msg-own-bg: #5b5fef;
+  --msg-own-text: #ffffff;
+  --msg-other-bg: #e4e6ec;
+  --msg-other-text: #1c1e26;
+  --input-bg: #f4f5f8;
+  --input-border: #d4d8e2;
+  --chat-header-bg: #ffffff;
+  --chat-main-bg: #f4f5f8;
 }
 
-body {
-  font-family: "Poppins", sans-serif;
-  background-color: #f0f2f5;
+/* ============ DARK THEME (default) ============ */
+[data-theme="dark"] {
+  --sidebar-bg: #1a1d29;
+  --sidebar-hover: #252939;
+  --sidebar-active: #2f3349;
+  --sidebar-text: #c5c7d4;
+  --sidebar-text-dim: #6b7080;
+  --bg-page: #f4f5f8;
+  --bg-card: #ffffff;
+  --border-color: #e4e6ec;
+  --text-main: #1c1e26;
+  --text-soft: #6b7080;
+  --msg-own-bg: #5b5fef;
+  --msg-own-text: #ffffff;
+  --msg-other-bg: #f0f2f5;
+  --msg-other-text: #1c1e26;
+  --input-bg: #f4f5f8;
+  --input-border: #e4e6ec;
+  --chat-header-bg: #ffffff;
+  --chat-main-bg: #f4f5f8;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
+/* ============ THEME TOGGLE BUTTON ============ */
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  margin-left: auto;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  line-height: 1;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
+.theme-toggle-btn:hover {
+  background: var(--sidebar-hover);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 10px;
+/* ============ SIDEBAR use CSS vars ============ */
+.sidebar {
+  background: var(--sidebar-bg) !important;
+  color: var(--sidebar-text) !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+.sidebar-brand h1,
+.sidebar-section-title,
+.room-item,
+.no-users {
+  color: var(--sidebar-text) !important;
+}
+
+.room-item:hover {
+  background: var(--sidebar-hover) !important;
+}
+
+.room-item.active {
+  background: var(--sidebar-active) !important;
+}
+
+/* ============ CHAT use CSS vars ============ */
+.chat-main {
+  background: var(--chat-main-bg) !important;
+}
+
+.chat-header {
+  background: var(--chat-header-bg) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.chat-header h3,
+.chat-header-hash {
+  color: var(--text-main) !important;
+}
+
+.chat-header-sub {
+  color: var(--text-soft) !important;
+}
+
+.own-bubble {
+  background: var(--msg-own-bg) !important;
+  color: var(--msg-own-text) !important;
+}
+
+.other-bubble {
+  background: var(--msg-other-bg) !important;
+  color: var(--msg-other-text) !important;
+}
+
+.chat-input-area {
+  background: var(--chat-header-bg) !important;
+  border-top: 1px solid var(--border-color) !important;
+}
+
+.chat-input-area input {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-main) !important;
+}
+
+.no-messages {
+  color: var(--text-soft) !important;
 }

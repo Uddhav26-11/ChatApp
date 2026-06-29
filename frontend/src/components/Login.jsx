@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import toast from "react-hot-toast";
 import { useAuth, API_URL } from "../context/AuthContext.jsx";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
@@ -14,15 +14,15 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
       const res = await axios.post(`${API_URL}/auth/login`, { email, password });
       login(res.data);
+      toast.success(`Welcome back, ${res.data.username}! 👋`);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong");
+      toast.error(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -34,8 +34,6 @@ function Login() {
         <div className="auth-logo">💬</div>
         <h2>Welcome Back</h2>
         <p className="auth-subtitle">Login to continue chatting</p>
-
-        {error && <div className="auth-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

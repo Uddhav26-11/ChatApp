@@ -14,17 +14,28 @@ export const AuthProvider = ({ children }) => {
 
   const [socket, setSocket] = useState(null);
 
+  // ── Dark/Light Mode ──
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("chatTheme") || "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("chatTheme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
   useEffect(() => {
     if (user) {
       const newSocket = io(SOCKET_URL, {
         transports: ["websocket"],
-
         withCredentials: true,
       });
       setSocket(newSocket);
-
       newSocket.emit("user-online", user._id);
-
       return () => {
         newSocket.disconnect();
       };
@@ -43,7 +54,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, socket }}>
+    <AuthContext.Provider value={{ user, login, logout, socket, theme, toggleTheme }}>
       {children}
     </AuthContext.Provider>
   );
