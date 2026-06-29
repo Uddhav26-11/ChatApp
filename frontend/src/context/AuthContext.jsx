@@ -16,7 +16,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      const newSocket = io(SOCKET_URL);
+      const newSocket = io(SOCKET_URL, {
+        transports: ["websocket"],
+
+        withCredentials: true,
+      });
       setSocket(newSocket);
 
       newSocket.emit("user-online", user._id);
