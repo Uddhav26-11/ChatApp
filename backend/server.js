@@ -37,7 +37,7 @@ const io = new Server(server, {
 
     origin:
       process.env.CLIENT_URL ||
-      "http://localhost:5173",
+      "https://chatapp-w395.onrender.com",
 
     methods: ["GET", "POST"],
 
