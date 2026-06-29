@@ -17,12 +17,23 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://chat-app-eta-flax.vercel.app",
-  "https://chat-30lyjuvsz-uddhav-c-project.vercel.app"
 ];
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin(origin, callback) {
+      // Postman ya direct requests ke liye
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error("CORS not allowed")
+      );
+    },
+
     credentials: true,
   })
 );
@@ -59,33 +70,40 @@ io.on("connection", (socket) => {
     socket.userId = userId;
 
     io.emit(
+
       "online-users",
-      Array.from(onlineUsers.keys())
+
+      Array.from(
+
+        onlineUsers.keys()
+
+      )
+
     );
 
   });
 
+  socket.on(
 
-  socket.on("join-room", (room) => {
+    "join-room",
 
-    socket.join(room);
+    (room) => {
 
-  });
+      socket.join(room);
 
+    }
 
-  socket.on("send-message", async (data) => {
+  );
 
-    try {
+  socket.on(
 
-      const {
-        sender,
-        senderName,
-        room,
-        text
-      } = data;
+    "send-message",
 
-      const newMessage =
-        await Message.create({
+    async (data) => {
+
+      try {
+
+        const {
 
           sender,
 
@@ -95,26 +113,41 @@ io.on("connection", (socket) => {
 
           text
 
-        });
+        } = data;
 
-      io.to(room).emit(
+        const newMessage =
 
-        "receive-message",
+          await Message.create({
 
-        newMessage
+            sender,
 
-      );
+            senderName,
+
+            room,
+
+            text
+
+          });
+
+        io.to(room).emit(
+
+          "receive-message",
+
+          newMessage
+
+        );
+
+      }
+
+      catch (err) {
+
+        console.log(err);
+
+      }
 
     }
 
-    catch (err) {
-
-      console.log(err);
-
-    }
-
-  });
-
+  );
 
   socket.on(
 
@@ -136,7 +169,6 @@ io.on("connection", (socket) => {
 
   );
 
-
   socket.on(
 
     "stop-typing",
@@ -154,7 +186,6 @@ io.on("connection", (socket) => {
     }
 
   );
-
 
   socket.on(
 
@@ -188,6 +219,14 @@ io.on("connection", (socket) => {
 
       }
 
+      console.log(
+
+        "Disconnected:",
+
+        socket.id
+
+      );
+
     }
 
   );
@@ -195,14 +234,25 @@ io.on("connection", (socket) => {
 });
 
 const PORT =
-  process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+  process.env.PORT
 
-  console.log(
+  ||
 
-    `Server running on ${PORT}`
+  5000;
 
-  );
+server.listen(
 
-});
+  PORT,
+
+  () => {
+
+    console.log(
+
+      `Server running on ${PORT}`
+
+    );
+
+  }
+
+);
