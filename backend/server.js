@@ -14,17 +14,21 @@ connectDB();
 
 const app = express();
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://chat-app-eta-flax.vercel.app",
-  "https://chat-3jafyg26b-uddhav-c-project.vercel.app",
-];
+// Vercel ka pattern match karo — sab Vercel URLs allow honge
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Postman/direct requests
+  if (origin === "http://localhost:5173") return true;
+  if (origin.endsWith("-uddhav-c-project.vercel.app")) return true; // Vercel preview URLs
+  if (origin === "https://chat-app-eta-flax.vercel.app") return true; // production URL
+  return false;
+};
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
       return callback(new Error("CORS not allowed"));
     },
     credentials: true,
@@ -44,7 +48,12 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS not allowed"));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -55,24 +64,20 @@ const onlineUsers = new Map();
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
-  // ── User online ──
   socket.on("user-online", (userId) => {
     onlineUsers.set(userId, socket.id);
     socket.userId = userId;
     io.emit("online-users", Array.from(onlineUsers.keys()));
   });
 
-  // ── Group room join ──
   socket.on("join-room", (room) => {
     socket.join(room);
   });
 
-  // ── Private room join ──
   socket.on("join-private-room", (roomId) => {
     socket.join(roomId);
   });
 
-  // ── Group message ──
   socket.on("send-message", async (data) => {
     try {
       const { sender, senderName, room, text } = data;
@@ -89,7 +94,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ── Private message ──
   socket.on("private-message", async (data) => {
     try {
       const { sender, receiver, senderName, text } = data;
@@ -108,7 +112,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ── Group typing ──
   socket.on("typing", ({ room, senderName }) => {
     socket.to(room).emit("typing", senderName);
   });
@@ -117,7 +120,6 @@ io.on("connection", (socket) => {
     socket.to(room).emit("stop-typing");
   });
 
-  // ── Private typing ──
   socket.on("typing-private", ({ sender, receiver, senderName }) => {
     const roomId = [sender, receiver].sort().join("_");
     socket.to(roomId).emit("typing-private", senderName);
@@ -128,7 +130,6 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("stop-typing-private");
   });
 
-  // ── Disconnect ──
   socket.on("disconnect", () => {
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
