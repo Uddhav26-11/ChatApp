@@ -579,3 +579,27 @@
     max-width: 85%;
   }
 }
+.chat-input-area{
+  position:relative;
+}
+
+.emoji-container{
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+
+.emoji-btn{
+  border:none;
+  background:transparent;
+  font-size:24px;
+  cursor:pointer;
+  margin-right:10px;
+}
+
+.emoji-picker-box{
+  position:absolute;
+  bottom:60px;
+  left:0;
+  z-index:9999;
+}
