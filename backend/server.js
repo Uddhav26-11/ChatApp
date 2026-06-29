@@ -17,6 +17,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://chat-app-eta-flax.vercel.app",
+  "https://chat-3jafyg26b-uddhav-c-project.vercel.app",
 ];
 
 app.use(
