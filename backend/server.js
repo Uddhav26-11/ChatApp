@@ -22,18 +22,10 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, callback) {
-      // Postman ya direct requests ke liye
       if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(
-        new Error("CORS not allowed")
-      );
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS not allowed"));
     },
-
     credentials: true,
   })
 );
@@ -60,199 +52,93 @@ const io = new Server(server, {
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
-
   console.log("Connected:", socket.id);
 
+  // ── User online ──
   socket.on("user-online", (userId) => {
-
     onlineUsers.set(userId, socket.id);
-
     socket.userId = userId;
-
-    io.emit(
-
-      "online-users",
-
-      Array.from(
-
-        onlineUsers.keys()
-
-      )
-
-    );
-
+    io.emit("online-users", Array.from(onlineUsers.keys()));
   });
 
-  socket.on(
+  // ── Group room join ──
+  socket.on("join-room", (room) => {
+    socket.join(room);
+  });
 
-    "join-room",
+  // ── Private room join ──
+  socket.on("join-private-room", (roomId) => {
+    socket.join(roomId);
+  });
 
-    (room) => {
-
-      socket.join(room);
-
+  // ── Group message ──
+  socket.on("send-message", async (data) => {
+    try {
+      const { sender, senderName, room, text } = data;
+      const newMessage = await Message.create({
+        sender,
+        senderName,
+        room,
+        text,
+        messageType: "group",
+      });
+      io.to(room).emit("receive-message", newMessage);
+    } catch (err) {
+      console.log(err);
     }
+  });
 
-  );
-
-  socket.on(
-
-    "send-message",
-
-    async (data) => {
-
-      try {
-
-        const {
-
-          sender,
-
-          senderName,
-
-          room,
-
-          text
-
-        } = data;
-
-        const newMessage =
-
-          await Message.create({
-
-            sender,
-
-            senderName,
-
-            room,
-
-            text
-
-          });
-
-        io.to(room).emit(
-
-          "receive-message",
-
-          newMessage
-
-        );
-
-      }
-
-      catch (err) {
-
-        console.log(err);
-
-      }
-
+  // ── Private message ──
+  socket.on("private-message", async (data) => {
+    try {
+      const { sender, receiver, senderName, text } = data;
+      const roomId = [sender, receiver].sort().join("_");
+      const newMessage = await Message.create({
+        sender,
+        receiver,
+        senderName,
+        room: roomId,
+        text,
+        messageType: "private",
+      });
+      io.to(roomId).emit("receive-private-message", newMessage);
+    } catch (err) {
+      console.log(err);
     }
+  });
 
-  );
+  // ── Group typing ──
+  socket.on("typing", ({ room, senderName }) => {
+    socket.to(room).emit("typing", senderName);
+  });
 
-  socket.on(
+  socket.on("stop-typing", ({ room }) => {
+    socket.to(room).emit("stop-typing");
+  });
 
-    "typing",
+  // ── Private typing ──
+  socket.on("typing-private", ({ sender, receiver, senderName }) => {
+    const roomId = [sender, receiver].sort().join("_");
+    socket.to(roomId).emit("typing-private", senderName);
+  });
 
-    ({ room, senderName }) => {
+  socket.on("stop-typing-private", ({ sender, receiver }) => {
+    const roomId = [sender, receiver].sort().join("_");
+    socket.to(roomId).emit("stop-typing-private");
+  });
 
-      socket.to(room)
-
-      .emit(
-
-        "typing",
-
-        senderName
-
-      );
-
+  // ── Disconnect ──
+  socket.on("disconnect", () => {
+    if (socket.userId) {
+      onlineUsers.delete(socket.userId);
+      io.emit("online-users", Array.from(onlineUsers.keys()));
     }
-
-  );
-
-  socket.on(
-
-    "stop-typing",
-
-    ({ room }) => {
-
-      socket.to(room)
-
-      .emit(
-
-        "stop-typing"
-
-      );
-
-    }
-
-  );
-
-  socket.on(
-
-    "disconnect",
-
-    () => {
-
-      if (
-
-        socket.userId
-
-      ) {
-
-        onlineUsers.delete(
-
-          socket.userId
-
-        );
-
-        io.emit(
-
-          "online-users",
-
-          Array.from(
-
-            onlineUsers.keys()
-
-          )
-
-        );
-
-      }
-
-      console.log(
-
-        "Disconnected:",
-
-        socket.id
-
-      );
-
-    }
-
-  );
-
+    console.log("Disconnected:", socket.id);
+  });
 });
 
-const PORT =
+const PORT = process.env.PORT || 5000;
 
-  process.env.PORT
-
-  ||
-
-  5000;
-
-server.listen(
-
-  PORT,
-
-  () => {
-
-    console.log(
-
-      `Server running on ${PORT}`
-
-    );
-
-  }
-
-);
+server.listen(PORT, () => {
+  console.log(`Server running on ${PORT}`);
+});

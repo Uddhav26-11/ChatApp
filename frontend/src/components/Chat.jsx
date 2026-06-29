@@ -13,1144 +13,302 @@ const getAvatarColorClass = (key) => {
     "avatar-color-4",
     "avatar-color-5",
   ];
-
   let hash = 0;
-
   for (let i = 0; i < key.length; i++) {
     hash = key.charCodeAt(i) + ((hash << 5) - hash);
   }
-
   return colors[Math.abs(hash) % colors.length];
 };
 
 function Chat() {
-
   const { user, socket, logout } = useAuth();
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-
   const [users, setUsers] = useState([]);
-
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [activeRoom, setActiveRoom] = useState("general");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [typingUser, setTypingUser] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
 
-  const [activeRoom, setActiveRoom] =
-    useState("general");
-
-  const [selectedUser, setSelectedUser] =
-    useState(null);
-
-  const [typingUser, setTypingUser] =
-    useState("");
-
-  const [showEmoji, setShowEmoji] =
-    useState(false);
-
-  const messagesEndRef =
-    useRef(null);
-
-  const typingTimeoutRef =
-    useRef(null);
+  const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const authHeader = {
-
-    headers: {
-
-      Authorization:
-
-        `Bearer ${user.token}`
-
-    }
-
+    headers: { Authorization: `Bearer ${user.token}` },
   };
 
+  const roomId = selectedUser
+    ? [user._id, selectedUser._id].sort().join("_")
+    : activeRoom;
 
-  const roomId =
-
-    selectedUser
-
-      ?
-
-      [
-
-        user._id,
-
-        selectedUser._id
-
-      ]
-
-        .sort()
-
-        .join("_")
-
-      :
-
-      activeRoom;
-
-
-
+  // ── Fetch users ──
   useEffect(() => {
-
     const fetchUsers = async () => {
-
       try {
-
-        const res =
-
-          await axios.get(
-
-            `${API_URL}/auth/users`,
-
-            authHeader
-
-          );
-
-        setUsers(
-
-          res.data
-
-        );
-
+        const res = await axios.get(`${API_URL}/auth/users`, authHeader);
+        setUsers(res.data);
+      } catch (err) {
+        console.log(err);
       }
-
-      catch (err) {
-
-        console.log(
-
-          err
-
-        );
-
-      }
-
     };
-
     fetchUsers();
-
   }, []);
 
-
-
-
+  // ── Fetch messages + join room ──
   useEffect(() => {
-
-    const fetchMessages =
-
-      async () => {
-
-        try {
-
-          let url;
-
-          if (
-
-            selectedUser
-
-          ) {
-
-            url =
-
-              `${API_URL}/messages/private/${selectedUser._id}`;
-
+    const fetchAndJoin = async () => {
+      try {
+        let url;
+        if (selectedUser) {
+          // Pehle private room join karo, phir messages fetch karo
+          if (socket) {
+            socket.emit("join-private-room", roomId);
           }
-
-          else {
-
-            url =
-
-              `${API_URL}/messages/${activeRoom}`;
-
+          url = `${API_URL}/messages/private/${selectedUser._id}`;
+        } else {
+          if (socket) {
+            socket.emit("join-room", activeRoom);
           }
-
-
-          const res =
-
-            await axios.get(
-
-              url,
-
-              authHeader
-
-            );
-
-          setMessages(
-
-            res.data
-
-          );
-
+          url = `${API_URL}/messages/${activeRoom}`;
         }
+        const res = await axios.get(url, authHeader);
+        setMessages(res.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchAndJoin();
+  }, [activeRoom, selectedUser, socket]);
 
-        catch (err) {
-
-          console.log(
-
-            err
-
-          );
-
-        }
-
-      };
-
-
-    fetchMessages();
-
-
-    if (
-
-      socket
-
-      &&
-
-      !selectedUser
-
-    ) {
-
-      socket.emit(
-
-        "join-room",
-
-        activeRoom
-
-      );
-
-    }
-
-  },
-
-    [
-
-      activeRoom,
-
-      selectedUser,
-
-      socket
-
-    ]
-
-  );
-
-
-
+  // ── Socket listeners ──
   useEffect(() => {
+    if (!socket) return;
 
-    if (
-
-      socket
-
-      &&
-
-      selectedUser
-
-    ) {
-
-      socket.emit(
-
-        "join-private-room",
-
-        roomId
-
-      );
-
-    }
-
-  },
-
-    [
-
-      selectedUser,
-
-      socket
-
-    ]
-
-  );
-
-
-
-  useEffect(() => {
-
-    if (!socket)
-
-      return;
-
-
-    socket.on(
-
-      "receive-message",
-
-      (message) => {
-
-        if (
-
-          message.room
-
-          ===
-
-          activeRoom
-
-        ) {
-
-          setMessages(
-
-            prev =>
-
-              [
-
-                ...prev,
-
-                message
-
-              ]
-
-          );
-
-        }
-
+    // Group message — sirf current room ka message show karo
+    const onGroupMsg = (message) => {
+      if (message.room === activeRoom && !selectedUser) {
+        setMessages((prev) => [...prev, message]);
       }
+    };
 
-    );
+    // Private message — sirf current private chat ka show karo
+    const onPrivateMsg = (message) => {
+      const msgRoomId = [
+        typeof message.sender === "object" ? message.sender._id : message.sender,
+        message.receiver,
+      ]
+        .sort()
+        .join("_");
 
-
-    socket.on(
-
-      "receive-private-message",
-
-      (message) => {
-
-        setMessages(
-
-          prev =>
-
-            [
-
-              ...prev,
-
-              message
-
-            ]
-
-        );
-
+      if (selectedUser && msgRoomId === roomId) {
+        setMessages((prev) => [...prev, message]);
       }
+    };
 
-    );
-
-
-    socket.on(
-
-      "online-users",
-
-      (onlineList) => {
-
-        setOnlineUsers(
-
-          onlineList
-
-        );
-
-      }
-
-    );
-
-
-    socket.on(
-
-      "typing",
-
-      (senderName) => {
-
-        setTypingUser(
-
-          senderName
-
-        );
-
-      }
-
-    );
-
-
-    socket.on(
-
-      "typing-private",
-
-      (senderName) => {
-
-        setTypingUser(
-
-          senderName
-
-        );
-
-      }
-
-    );
-
-
-    socket.on(
-
-      "stop-typing",
-
-      () => {
-
-        setTypingUser(
-
-          ""
-
-        );
-
-      }
-
-    );
-
-
-    socket.on(
-
-      "stop-typing-private",
-
-      () => {
-
-        setTypingUser(
-
-          ""
-
-        );
-
-      }
-
-    );
-
-
+    socket.on("receive-message", onGroupMsg);
+    socket.on("receive-private-message", onPrivateMsg);
+    socket.on("online-users", (list) => setOnlineUsers(list));
+    socket.on("typing", (name) => setTypingUser(name));
+    socket.on("typing-private", (name) => setTypingUser(name));
+    socket.on("stop-typing", () => setTypingUser(""));
+    socket.on("stop-typing-private", () => setTypingUser(""));
 
     return () => {
-
-      socket.off(
-
-        "receive-message"
-
-      );
-
-      socket.off(
-
-        "receive-private-message"
-
-      );
-
-      socket.off(
-
-        "online-users"
-
-      );
-
-      socket.off(
-
-        "typing"
-
-      );
-
-      socket.off(
-
-        "typing-private"
-
-      );
-
-      socket.off(
-
-        "stop-typing"
-
-      );
-
-      socket.off(
-
-        "stop-typing-private"
-
-      );
-
+      socket.off("receive-message", onGroupMsg);
+      socket.off("receive-private-message", onPrivateMsg);
+      socket.off("online-users");
+      socket.off("typing");
+      socket.off("typing-private");
+      socket.off("stop-typing");
+      socket.off("stop-typing-private");
     };
+  }, [socket, activeRoom, selectedUser, roomId]);
 
-  },
-
-    [
-
-      socket,
-
-      activeRoom
-
-    ]
-
-  );
-
-
-
+  // ── Auto scroll ──
   useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    messagesEndRef
-
-      .current
-
-      ?.scrollIntoView({
-
-        behavior:
-
-          "smooth"
-
-      });
-
-  },
-
-    [
-
-      messages
-
-    ]
-
-  );
   const handleSend = (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    if (!text.trim() || !socket) return;
 
-  if (!text.trim()) return;
-
-  if (selectedUser) {
-    socket.emit("private-message", {
-      sender: user._id,
-      receiver: selectedUser._id,
-      senderName: user.username,
-      text: text.trim(),
-    });
-
-    socket.emit("stop-typing-private", {
-      sender: user._id,
-      receiver: selectedUser._id,
-    });
-  } else {
-    const messageData = {
-      sender: user._id,
-      senderName: user.username,
-      room: activeRoom,
-      text: text.trim(),
-    };
-
-    socket.emit(
-      "send-message",
-      messageData
-    );
-
-    socket.emit(
-      "stop-typing",
-      {
-        room: activeRoom,
-      }
-    );
-  }
-
-  setText("");
-  setShowEmoji(false);
-};
-
-const handleTyping = (e) => {
-
-  setText(e.target.value);
-
-  if (!socket) return;
-
-  if (selectedUser) {
-
-    socket.emit(
-      "typing-private",
-      {
+    if (selectedUser) {
+      socket.emit("private-message", {
         sender: user._id,
         receiver: selectedUser._id,
         senderName: user.username,
-      }
-    );
-
-  } else {
-
-    socket.emit(
-      "typing",
-      {
-        room: activeRoom,
+        text: text.trim(),
+      });
+      socket.emit("stop-typing-private", {
+        sender: user._id,
+        receiver: selectedUser._id,
+      });
+    } else {
+      socket.emit("send-message", {
+        sender: user._id,
         senderName: user.username,
-      }
-    );
+        room: activeRoom,
+        text: text.trim(),
+      });
+      socket.emit("stop-typing", { room: activeRoom });
+    }
 
-  }
+    setText("");
+    setShowEmoji(false);
+  };
 
-  if (typingTimeoutRef.current) {
-
-    clearTimeout(
-      typingTimeoutRef.current
-    );
-
-  }
-
-  typingTimeoutRef.current = setTimeout(() => {
+  const handleTyping = (e) => {
+    setText(e.target.value);
+    if (!socket) return;
 
     if (selectedUser) {
+      socket.emit("typing-private", {
+        sender: user._id,
+        receiver: selectedUser._id,
+        senderName: user.username,
+      });
+    } else {
+      socket.emit("typing", { room: activeRoom, senderName: user.username });
+    }
 
-      socket.emit(
-        "stop-typing-private",
-        {
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      if (selectedUser) {
+        socket.emit("stop-typing-private", {
           sender: user._id,
           receiver: selectedUser._id,
-        }
-      );
+        });
+      } else {
+        socket.emit("stop-typing", { room: activeRoom });
+      }
+    }, 1500);
+  };
 
-    } else {
+  const handleEmojiClick = (emojiData) => {
+    setText((prev) => prev + emojiData.emoji);
+  };
 
-      socket.emit(
-        "stop-typing",
-        {
-          room: activeRoom,
-        }
-      );
+  const formatTime = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
 
-    }
+  return (
+    <div className="chat-app">
+      <Sidebar
+        users={users}
+        onlineUsers={onlineUsers}
+        currentUser={user}
+        activeRoom={activeRoom}
+        setActiveRoom={setActiveRoom}
+        selectedUser={selectedUser}
+        setSelectedUser={setSelectedUser}
+        onLogout={logout}
+      />
 
-  }, 1500);
+      <div className="chat-main">
+        <div className="chat-header">
+          <div className="chat-header-left">
+            {selectedUser ? (
+              <h3>{selectedUser.username}</h3>
+            ) : (
+              <>
+                <span className="chat-header-hash">#</span>
+                <h3>{activeRoom}</h3>
+              </>
+            )}
+          </div>
+          <span className="chat-header-sub">{onlineUsers.length} online</span>
+        </div>
 
-};
+        <div className="chat-messages">
+          {messages.length === 0 && (
+            <p className="no-messages">No messages yet 👋</p>
+          )}
 
-const handleEmojiClick = (emojiData) => {
+          {messages.map((msg) => {
+            const senderId =
+              typeof msg.sender === "object" ? msg.sender._id : msg.sender;
+            const isOwn = senderId === user._id;
 
-  setText(
-    (prev) =>
-      prev + emojiData.emoji
+            return (
+              <div
+                key={msg._id}
+                className={`message-bubble-wrapper ${isOwn ? "own" : "other"}`}
+              >
+                {!isOwn && (
+                  <div
+                    className={`msg-avatar ${getAvatarColorClass(msg.senderName)}`}
+                  >
+                    {msg.senderName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                <div
+                  className={`message-bubble ${isOwn ? "own-bubble" : "other-bubble"}`}
+                >
+                  {!isOwn && (
+                    <div className="msg-sender">{msg.senderName}</div>
+                  )}
+                  <div className="msg-text">{msg.text}</div>
+                  <div className="msg-time">{formatTime(msg.createdAt)}</div>
+                </div>
+              </div>
+            );
+          })}
+
+          {typingUser && (
+            <div className="typing-indicator">
+              <span className="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+              {typingUser} is typing
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <form className="chat-input-area" onSubmit={handleSend}>
+          <div className="emoji-container">
+            <button
+              type="button"
+              className="emoji-btn"
+              onClick={() => setShowEmoji(!showEmoji)}
+            >
+              😊
+            </button>
+            {showEmoji && (
+              <div className="emoji-picker-box">
+                <EmojiPicker onEmojiClick={handleEmojiClick} />
+              </div>
+            )}
+          </div>
+
+          <input
+            type="text"
+            value={text}
+            onChange={handleTyping}
+            placeholder={
+              selectedUser
+                ? `Message ${selectedUser.username}`
+                : `Message #${activeRoom}`
+            }
+          />
+
+          <button type="submit" className="send-btn">
+            ➤
+          </button>
+        </form>
+      </div>
+    </div>
   );
-
-};
-
-const formatTime = (dateStr) => {
-
-  const date =
-    new Date(dateStr);
-
-  return date.toLocaleTimeString(
-    [],
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  );
-
-};
-
-return (
-
-<div className="chat-app">
-
-<Sidebar
-
-users={users}
-
-onlineUsers={onlineUsers}
-
-currentUser={user}
-
-activeRoom={activeRoom}
-
-setActiveRoom={setActiveRoom}
-
-selectedUser={selectedUser}
-
-setSelectedUser={setSelectedUser}
-
-onLogout={logout}
-
-/>
-
-<div className="chat-main">
-
-<div className="chat-header">
-
-<div className="chat-header-left">
-
-{
-
-selectedUser
-
-?
-
-<>
-
-<h3>
-
-{selectedUser.username}
-
-</h3>
-
-</>
-
-:
-
-<>
-
-<span
-
-className=
-
-"chat-header-hash"
-
->
-
-#
-
-</span>
-
-<h3>
-
-{activeRoom}
-
-</h3>
-
-</>
-
-}
-
-</div>
-
-<span
-
-className=
-
-"chat-header-sub"
-
->
-
-{
-
-onlineUsers.length
-
-}
-
-online
-
-</span>
-
-</div>
-
-
-
-<div
-
-className=
-
-"chat-messages"
-
->
-
-{
-
-messages.length===0
-
-&&
-
-(
-
-<p
-
-className=
-
-"no-messages"
-
->
-
-No messages yet 👋
-
-</p>
-
-)
-
-}
-
-
-
-{
-
-messages.map(
-
-(msg)=>{
-
-const isOwn =
-
-msg.sender===
-
-user._id ||
-
-msg.sender?._id===
-
-user._id;
-
-return(
-
-<div
-
-key={msg._id}
-
-className={
-
-`message-bubble-wrapper
-
-${
-
-isOwn
-
-?
-
-"own"
-
-:
-
-"other"
-
-}`
-
-}
-
->
-
-{
-
-!isOwn &&
-
-(
-
-<div
-
-className={`
-
-msg-avatar
-
-${
-
-getAvatarColorClass(
-
-msg.senderName
-
-)
-
-}
-
-`}
-
->
-
-{
-
-msg.senderName
-
-.charAt(0)
-
-.toUpperCase()
-
-}
-
-</div>
-
-)
-
-}
-
-
-
-<div
-
-className={`
-
-message-bubble
-
-${
-
-isOwn
-
-?
-
-"own-bubble"
-
-:
-
-"other-bubble"
-
-}
-
-`}
-
->
-
-{
-
-!isOwn &&
-
-(
-
-<div
-
-className=
-
-"msg-sender"
-
->
-
-{
-
-msg.senderName
-
-}
-
-</div>
-
-)
-
-}
-
-
-
-<div
-
-className=
-
-"msg-text"
-
->
-
-{
-
-msg.text
-
-}
-
-</div>
-
-
-
-<div
-
-className=
-
-"msg-time"
-
->
-
-{
-
-formatTime(
-
-msg.createdAt
-
-)
-
-}
-
-</div>
-
-</div>
-
-</div>
-
-)
-
-}
-
-)
-
-}
-
-
-
-{
-
-typingUser
-
-&&
-
-(
-
-<div
-
-className=
-
-"typing-indicator"
-
->
-
-<span
-
-className=
-
-"typing-dots"
-
->
-
-<span>
-
-</span>
-
-<span>
-
-</span>
-
-<span>
-
-</span>
-
-</span>
-
-{
-
-typingUser
-
-}
-
-is typing
-
-</div>
-
-)
-
-}
-
-
-
-<div
-
-ref={messagesEndRef}
-
-/>
-
-</div>
-
-
-
-<form
-
-className=
-
-"chat-input-area"
-
-onSubmit={handleSend}
-
->
-
-<div
-
-className=
-
-"emoji-container"
-
->
-
-<button
-
-type="button"
-
-className=
-
-"emoji-btn"
-
-onClick={()=>
-
-setShowEmoji(
-
-!showEmoji
-
-)
-
-}
-
->
-
-😊
-
-</button>
-
-
-
-{
-
-showEmoji
-
-&&
-
-(
-
-<div
-
-className=
-
-"emoji-picker-box"
-
->
-
-<EmojiPicker
-
-onEmojiClick={
-
-handleEmojiClick
-
-}
-
-/>
-
-</div>
-
-)
-
-}
-
-</div>
-
-
-
-<input
-
-type="text"
-
-value={text}
-
-onChange={handleTyping}
-
-placeholder={
-
-selectedUser
-
-?
-
-`Message ${selectedUser.username}`
-
-:
-
-`Message #${activeRoom}`
-
-}
-
-/>
-
-
-
-<button
-
-type="submit"
-
-className=
-
-"send-btn"
-
->
-
-➤
-
-</button>
-
-</form>
-
-</div>
-
-</div>
-
-);
-
 }
 
 export default Chat;
