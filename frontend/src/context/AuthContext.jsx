@@ -3,8 +3,8 @@ import { io } from "socket.io-client";
 
 const AuthContext = createContext();
 
-export const SOCKET_URL = "http://localhost:5000";
-export const API_URL = "http://localhost:5000/api";
+export const SOCKET_URL = "https://chatapp-w395.onrender.com";
+export const API_URL = "https://chatapp-w395.onrender.com/api";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
